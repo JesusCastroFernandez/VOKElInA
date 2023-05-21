@@ -1,0 +1,65 @@
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, Aer, execute
+
+def quantum_walk_with_constraints(adjacency_matrix, constraint_matrix):
+    num_vertices = len(adjacency_matrix)
+
+    # Crear los registros cuánticos y clásicos
+    qr_vertex = QuantumRegister(num_vertices)
+    qr_edge = QuantumRegister(num_vertices)
+    cr = ClassicalRegister(num_vertices)
+
+    # Inicializar el circuito cuántico
+    qc = QuantumCircuit(qr_vertex, qr_edge, cr)
+
+    # Inicializar el estado del vértice inicial
+    qc.x(qr_vertex[0])
+
+    # Realizar el recorrido cuántico con restricciones
+    for _ in range(num_vertices):
+        # Aplicar las restricciones
+        for i in range(num_vertices):
+            if constraint_matrix[i] == 1:
+                qc.cx(qr_vertex[i], qr_edge[i])
+
+        # Realizar el paso de recorrido cuántico
+        for i in range(num_vertices):
+            for j in range(num_vertices):
+                if adjacency_matrix[i][j] == 1:
+                    qc.ccx(qr_edge[i], qr_vertex[j], qr_vertex[(j + 1) % num_vertices])
+
+        # Invertir las restricciones
+        for i in range(num_vertices):
+            if constraint_matrix[i] == 1:
+                qc.cx(qr_vertex[i], qr_edge[i])
+
+    # Medir los resultados
+    qc.measure(qr_vertex, cr)
+
+    # Ejecutar el circuito cuántico en un simulador local
+    simulator = Aer.get_backend('qasm_simulator')
+    job = execute(qc, simulator, shots=1)
+    result = job.result()
+    counts = result.get_counts(qc)
+    bitstring = list(counts.keys())[0]
+
+    # Obtener el camino cuántico resultante
+    quantum_walk = [int(bit) for bit in bitstring]
+
+    return quantum_walk
+
+# Matriz de adyacencia del grafo
+adjacency_matrix = [
+    [0, 1, 0, 1],
+    [1, 0, 1, 1],
+    [0, 1, 0, 0],
+    [1, 1, 0, 0]
+]
+
+# Matriz de restricciones
+constraint_matrix = [0, 1, 0, 1]
+
+# Realizar el recorrido cuántico con restricciones
+quantum_walk = quantum_walk_with_constraints(adjacency_matrix, constraint_matrix)
+
+# Imprimir el camino cuántico resultante
+print("Quantum walk:", quantum_walk)
